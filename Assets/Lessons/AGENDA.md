@@ -28,6 +28,7 @@
 
 ---
 
+
 ## Lesson 3: Vertex Manipulation & Interaction
 
 | Topic | Question |
