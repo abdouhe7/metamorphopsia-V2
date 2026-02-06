@@ -1,0 +1,46 @@
+#pragma kernel VertexProcess
+#pragma kernel QuadProcess
+
+#include "Common.hlsl"
+#include "VertexProcessing.hlsl"
+#include "QuadProcessing.hlsl"
+
+[numthreads(512,1,1)]
+void VertexProcess (uint3 id : SV_DispatchThreadID)
+{
+	VertexTransform(id.x);
+}
+
+[numthreads(512,1,1)]
+void QuadProcess(uint3 id : SV_DispatchThreadID)
+{
+	uint4 quad = quadBuffer[id.x];
+	int idx0 = quad.x;
+	int idx1 = quad.y;
+	int idx2 = quad.z;
+	int idx3 = quad.w;
+
+	float4 v[4];
+	v[0] = vertexOutBuffer[idx0].clipPos;
+	v[1] = vertexOutBuffer[idx1].clipPos;
+	v[2] = vertexOutBuffer[idx2].clipPos;
+	v[3] = vertexOutBuffer[idx3].clipPos;
+
+	for (int k = 0; k<4; k++)
+    {
+        v[k].x /= v[k].w;
+        v[k].y /= v[k].w;
+        v[k].z /= v[k].w;                  
+    }
+	for (int k = 0; k < 4; k++)
+    {
+        float4 vec = v[k];
+        vec.x = 0.5f * (frameBufferSize.x - 1) * (vec.x + 1.0f);
+        vec.y = 0.5f * (frameBufferSize.y - 1)* (vec.y + 1.0f);
+
+        v[k] = vec;
+    }
+	
+	RasterizeTriangle(idx0, idx1, idx2, idx3, v);  
+}
+

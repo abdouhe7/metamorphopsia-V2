@@ -1,0 +1,15 @@
+
+
+public enum AssessmentType
+{
+    NONE,
+    SMOOTH_PURSUIT,
+    SACCADE,
+    AMSLER_GRID_ET,
+    AMSLER_GRID,
+    AMSLER_GRID_DISTORED,
+    REALTIME_CORRECTION,
+    IMAGE_CORRECTION,
+    CURSOR_GAZE_BUBBLE,
+    L1Amal
+}
