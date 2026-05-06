@@ -5,7 +5,7 @@
       "app_key": "application.generated.unity.metamorphopsia.exe",
       "launch_type": "url",
       "url": "steam://launch/",
-      "action_manifest_path": "P:\\Unity Projects\\metamorphopsia V2\\Assets\\StreamingAssets\\SteamVR\\actions.json",
+      "action_manifest_path": "C:\\Users\\user\\OneDrive - Newcastle University\\Documents\\GitHub\\metamorphopsia-V2\\Assets\\StreamingAssets\\SteamVR\\actions.json",
       "strings": {
         "en_us": {
           "name": "metamorphopsia [Testing]"
