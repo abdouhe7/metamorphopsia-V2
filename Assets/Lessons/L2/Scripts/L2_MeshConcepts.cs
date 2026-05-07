@@ -21,7 +21,7 @@ namespace Lessons.L2
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class L2_MeshConcepts : MonoBehaviour
     {
-        public enum Demo { StaticQuad, CalculatedQuad, AmslerGrid20x20 }
+        public enum Demo { StaticQuad, CalculatedQuad, AmslerGrid }
 
         [Header("Which demo to run on Start")]
         public Demo demo = Demo.StaticQuad;
@@ -56,7 +56,7 @@ namespace Lessons.L2
             {
                 case Demo.StaticQuad:      CreateStaticQuad();      break;
                 case Demo.CalculatedQuad:  CreateCalculatedQuad();  break;
-                case Demo.AmslerGrid20x20: CreateAmslerGrid(); break;
+                case Demo.AmslerGrid: CreateAmslerGrid(); break;
             }
         }
 
@@ -88,13 +88,6 @@ namespace Lessons.L2
         //   Triangle A: 0 → 3 → 2   (counter-clockwise when winding is CW)
         //   Triangle B: 0 → 2 → 1
         // ═══════════════════════════════════════════════════════════
-        [ContextMenu("1 – Create Static Quad")]
-
-        // public int Subdivistion1
-        // {
-        //     get => Subdivistion;
-        //     set => Subdivistion = value;
-        // }
 
         public void CreateStaticQuad()
         {
@@ -149,7 +142,7 @@ namespace Lessons.L2
         //     tl = (x)   + (y+1) * cols
         //     tr = (x+1) + (y+1) * cols
         // ═══════════════════════════════════════════════════════════
-        [ContextMenu("2 – Create Calculated Quad")]
+
         public void CreateCalculatedQuad()
         {
             const int cols = 2;   // vertices along X  (= 1 cell wide)
@@ -172,7 +165,6 @@ namespace Lessons.L2
         //   Result: 441 vertices, 400 quads, 800 triangles.
         //   index formula: index = x + y * 21
         // ═══════════════════════════════════════════════════════════
-        [ContextMenu("3 – Create Amsler Grid 20×20")]
         public void CreateAmslerGrid()
         {
             int cols = gridXNumber + 1;
