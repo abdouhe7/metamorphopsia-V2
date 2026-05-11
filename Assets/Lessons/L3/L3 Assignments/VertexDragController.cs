@@ -11,6 +11,8 @@ public class VertexDragController : MonoBehaviour
     public float hoverScale = 0.13f;
     public float selectedScale = 0.20f;
 
+    public Vector3 pointOffset = new Vector3(0f, 0f, -0.08f);
+
     private MeshFilter meshFilter;
     private Mesh mesh;
     private Vector3[] vertices;
@@ -35,11 +37,19 @@ public class VertexDragController : MonoBehaviour
 
         points = GetComponentsInChildren<VertexPoint>();
 
+        SyncAllPointsToVertices();
+
         Debug.Log("VertexDragController started. Points found: " + points.Length);
     }
 
     void Update()
     {
+        if (cam == null)
+        {
+            cam = Camera.main;
+            if (cam == null) return;
+        }
+
         if (points == null || points.Length == 0) return;
 
         meshPlane = new Plane(transform.forward, transform.position);
@@ -146,12 +156,26 @@ public class VertexDragController : MonoBehaviour
 
         vertices[vertexIndex] = newPos;
 
-        points[selectedIndex].transform.localPosition =
-            newPos + new Vector3(0f, 0f, -0.08f);
-
         mesh.vertices = vertices;
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
+
+        SyncAllPointsToVertices();
+        SetPointStyle(selectedIndex, selectedMat, selectedScale);
+    }
+
+    void SyncAllPointsToVertices()
+    {
+        for (int i = 0; i < points.Length; i++)
+        {
+            int vertexIndex = points[i].vertexIndex;
+
+            if (vertexIndex < 0 || vertexIndex >= vertices.Length)
+                continue;
+
+            points[i].transform.localPosition =
+                vertices[vertexIndex] + pointOffset;
+        }
     }
 
     void SetPointStyle(int pointArrayIndex, Material mat, float scale)
