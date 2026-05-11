@@ -47980,6 +47980,13 @@ MonoBehaviour:
   normalScale: 0.08
   hoverScale: 0.13
   selectedScale: 0.2
+  pointOffset: {x: 0, y: 0, z: -0.08}
+  enableNeighbourRadius: 1
+  neighbourRadius: 3
+  neighbourStrength: 1
+  lockBoundaryPoints: 1
+  gridCols: 19
+  gridRows: 11
 --- !u!1 &1335284213
 GameObject:
   m_ObjectHideFlags: 0

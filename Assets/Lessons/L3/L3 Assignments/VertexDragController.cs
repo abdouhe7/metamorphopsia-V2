@@ -12,6 +12,14 @@ public class VertexDragController : MonoBehaviour
     public float selectedScale = 0.20f;
 
     public Vector3 pointOffset = new Vector3(0f, 0f, -0.08f);
+    [Header("Neighbour Radius")]
+public bool enableNeighbourRadius = true;
+public float neighbourRadius = 1.5f;
+public float neighbourStrength = 1.0f;
+[Header("Boundary Lock")]
+public bool lockBoundaryPoints = true;
+public int gridCols = 19; 
+public int gridRows = 11;
 
     private MeshFilter meshFilter;
     private Mesh mesh;
@@ -26,7 +34,7 @@ public class VertexDragController : MonoBehaviour
     private int selectedIndex = -1;
 
     private Vector3 dragOffset;
-
+    
     void Start()
     {
         meshFilter = GetComponent<MeshFilter>();
@@ -58,7 +66,16 @@ public class VertexDragController : MonoBehaviour
         HandleClick();
         HandleDrag();
     }
+bool IsBoundaryVertex(int vertexIndex)
+{
+    int x = vertexIndex % gridCols;
+    int y = vertexIndex / gridCols;
 
+    return x == 0 ||
+           x == gridCols - 1 ||
+           y == 0 ||
+           y == gridRows - 1;
+}
     void HandleHover()
     {
         if (selectedIndex >= 0) return;
@@ -132,37 +149,65 @@ public class VertexDragController : MonoBehaviour
             selectedIndex = -1;
         }
     }
+void HandleDrag()
+{
+    if (!Input.GetMouseButton(0)) return;
+    if (selectedIndex < 0) return;
 
-    void HandleDrag()
+    int vertexIndex = points[selectedIndex].vertexIndex;
+    if (lockBoundaryPoints && IsBoundaryVertex(vertexIndex))
+    return;
+
+    Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+
+    if (!meshPlane.Raycast(ray, out float enter))
+        return;
+
+    Vector3 hitLocal =
+        transform.InverseTransformPoint(ray.GetPoint(enter));
+
+    Vector3 oldPos = vertices[vertexIndex];
+
+    Vector3 newPos = new Vector3(
+        hitLocal.x + dragOffset.x,
+        hitLocal.y + dragOffset.y,
+        oldPos.z
+    );
+
+    Vector3 delta = newPos - oldPos;
+
+    vertices[vertexIndex] = newPos;
+
+    if (enableNeighbourRadius)
     {
-        if (!Input.GetMouseButton(0)) return;
-        if (selectedIndex < 0) return;
-
-        int vertexIndex = points[selectedIndex].vertexIndex;
-
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
-        if (!meshPlane.Raycast(ray, out float enter))
-            return;
-
-        Vector3 hitLocal =
-            transform.InverseTransformPoint(ray.GetPoint(enter));
-
-        Vector3 newPos = new Vector3(
-            hitLocal.x + dragOffset.x,
-            hitLocal.y + dragOffset.y,
-            vertices[vertexIndex].z
-        );
-
-        vertices[vertexIndex] = newPos;
-
-        mesh.vertices = vertices;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-
-        SyncAllPointsToVertices();
-        SetPointStyle(selectedIndex, selectedMat, selectedScale);
+        MoveNeighbours(vertexIndex, oldPos, delta);
     }
+
+    mesh.vertices = vertices;
+    mesh.RecalculateNormals();
+    mesh.RecalculateBounds();
+
+    SyncAllPointsToVertices();
+    SetPointStyle(selectedIndex, selectedMat, selectedScale);
+}
+void MoveNeighbours(int selectedVertexIndex, Vector3 selectedOldPos, Vector3 delta)
+{
+    for (int i = 0; i < vertices.Length; i++)
+    {   if (lockBoundaryPoints && IsBoundaryVertex(i))
+    continue;
+        if (i == selectedVertexIndex)
+            continue;
+
+        float distance = Vector3.Distance(vertices[i], selectedOldPos);
+
+        if (distance > neighbourRadius)
+            continue;
+
+        float weight = 1f - (distance / neighbourRadius);
+
+        vertices[i] += delta * weight * neighbourStrength;
+    }
+}
 
     void SyncAllPointsToVertices()
     {
