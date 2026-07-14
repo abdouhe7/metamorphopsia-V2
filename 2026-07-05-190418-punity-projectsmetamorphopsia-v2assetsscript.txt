@@ -1,0 +1,146 @@
+ ▐▛███▜▌   Claude Code v2.1.185
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    P:\Unity Projects\metamorphopsia V2
+
+  ✔ Using flicker-free rendering · if you want to go back, use /tui default
+    · Click to move your cursor in the text input
+    · Click to expand collapsed tool results
+    · By default, text auto-copies when you select it (/config to change)
+    · Hold Shift while selecting to use your terminal's native copy instead
+
+
+❯ P:\Unity Projects\metamorphopsia V2\Assets\Scripts\Amsler Grid Test\Customed  
+  Grid\GridManager.cs                                                           
+                                                                                
+  OK I want you to analyze these files and tell me actually what is the compute 
+  sahder  actually do at this point                                             
+                                                                                
+  And the restorizer                                                            
+                                                                                
+  P:\Unity Projects\metamorphopsia V2\Assets\Scripts\Common                     
+  Script\Raserizer\Rasterizer.cs                                                
+                                                                                
+  and                                                                           
+                                                                                
+  P:\Unity Projects\metamorphopsia V2\Assets\Scripts\Amsler Grid Test\Customed  
+  Grid\GenerateBoard.cs                                                         
+                                                                                
+                                                                                
+  I want to know exactly what's the exact job of each of them so I am able to   
+  describe it  For a student                                                    
+
+● Let me read all three files in parallel.
+
+  Read 3 files (ctrl+o to expand)
+
+● Now let me find and read the compute shader itself — that's the key piece.
+
+  Searched for 2 patterns, read 4 files (ctrl+o to expand)
+
+● Now I have the complete picture. Here is a clear breakdown for each component:
+
+  ---
+  The Big Picture First
+
+  This system implements a custom software rasterizer running on the GPU. The
+  Amsler Grid is an interactive deformable grid — the user can drag vertices to
+  warp it to match their visual distortion (metamorphopsia). The problem is:
+  once the grid is warped, how do you correctly map a texture onto it? Standard
+  GPU rendering splits quads into triangles, which causes texture seams and
+  wrong interpolation. This system solves that properly.
+
+  ---
+  1. The Compute Shader (ComputeShader.compute + HLSL files)
+
+  It is a GPU-side software rasterizer with exactly two jobs:
+
+  Kernel 1 — VertexProcess (runs once per vertex)
+
+  Each vertex of the grid mesh gets sent to the GPU. For every vertex,
+  VertexTransform multiplies its 3D position by the MVP matrix (Model × View ×
+  Projection) to convert it from object space → clip space. It also saves the
+  world position and UV coordinate. Output goes into vertexOutBuffer.
+
+  Think of it as: "Move every dot on the grid into the coordinate system that 
+  the camera sees."
+
+  Kernel 2 — QuadProcess (runs once per grid cell / quad)
+
+  For every grid cell (which is a 4-cornered quad, not a triangle):
+
+  1. Perspective division — divides x, y, z by w to get NDC (Normalized Device
+  Coordinates, the -1 to +1 cube)
+  2. Viewport transform — converts NDC to actual pixel coordinates on screen
+  3. Bounding box — finds the rectangle of pixels the quad occupies
+  4. For every pixel inside that bounding box:
+    - Computes Mean Value Coordinates (ComputeBarycentric2D) — this is a
+  generalization of barycentric coordinates that works correctly for quads (and
+  even irregular/concave shapes), not just triangles
+    - Uses those coordinates to perspective-correct interpolate the UV value at
+  that pixel
+    - Writes that (u, v) into the output texture at pixel position (x, y)
+
+  The final output is a UV coordinate texture — every pixel on screen contains
+  the UV coordinates of the original undistorted texture that belongs there.
+
+  ---
+  2. Rasterizer.cs — The CPU-Side Manager
+
+  A singleton that owns and drives the compute shader. Think of it as the
+  foreman that organizes the GPU work.
+
+  - Initialize() — Creates the output RenderTexture (the UV map), finds the two
+  GPU kernels by name
+  - QuadIndex() — Builds the index table: "quad 0 uses vertices 0,1,2,3; quad 1
+  uses vertices 1,2,3,4..." — tells the GPU how the grid cells connect
+  - TransportData() — Uploads 3 buffers from CPU → GPU every frame:
+    - VertexBuffer — vertex positions
+    - UVBuffer — UV coordinates
+    - QuadBuffer — quad connectivity
+  - VertexProcess() / TriangleProcess() — Sets all shader parameters and fires
+  (Dispatch) each GPU kernel
+  - Refresh() — Called every frame: upload data → run kernels → release buffers
+  → return the UV texture
+
+  ---
+  3. GenerateBoard.cs — The Display Screen
+
+  This is the "TV screen" that shows the final image.
+
+  - Start() — Creates a simple flat rectangle (4 vertices, 2 triangles) that
+  covers the screen exactly. It's just a canvas.
+  - Update() — Every frame it takes the UV texture computed by the Rasterizer
+  and passes it to its material via SetTexture("_UVTex", UVTex). The material's
+  shader then uses those UV values to sample and display the distorted image.
+
+  GenerateBoard never does math — it just holds the output and feeds it to the
+  display shader.
+
+  ---
+  4. GridManager.cs — The Orchestrator
+
+  The frame-by-frame glue that ties everything together.
+
+  Every frame in OnGridUpdate():
+  1. MoveVertexController.ChangeGrid.Invoke() — process any vertex dragging by
+  the user
+  2. Rasterizer.Instance().Refresh(mesh, transform, camera) — run the GPU
+  rasterizer on the current (possibly warped) mesh state
+  3. GenerateBoard.UVTex = ... — hand the resulting UV texture to the display
+  screen
+  4. gridDecoration.Update() — update the visual handles/dots shown on the grid
+  5. ShaderDecorateUpdate() — send grid width/height/scale to the grid's own
+  material shader
+
+  It also handles construction (InitializeGrid), subdivision (adding more grid
+  cells), and destruction.
+
+  ---
+  The Flow in One Sentence
+
+  ▎ GridManager deforms the mesh → Rasterizer uploads it to the GPU → the 
+  ▎ Compute Shader transforms every vertex and rasterizes every quad cell using 
+  ▎ mean value coordinates to build a UV map → GenerateBoard displays it on 
+  ▎ screen.
+
+✻ Churned for 1m 19s

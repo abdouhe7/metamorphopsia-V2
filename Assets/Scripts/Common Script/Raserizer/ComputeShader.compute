@@ -1,5 +1,5 @@
-#pragma kernel VertexProcess
-#pragma kernel QuadProcess
+#pragma kernel VertexProcess //0
+#pragma kernel QuadProcess   //1
 
 #include "Common.hlsl"
 #include "VertexProcessing.hlsl"

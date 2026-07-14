@@ -21,7 +21,6 @@ namespace RasterizerCS
         ComputeBuffer VertexBuffer;
         ComputeBuffer UVBuffer;
         ComputeBuffer QuadBuffer;
-
         ComputeBuffer VertexOutBuffer;
 
         ComputeShader computeShader;
@@ -122,8 +121,8 @@ namespace RasterizerCS
             UVCoordinateTexture.enableRandomWrite = true;
             UVCoordinateTexture.Create();
 
-            kernelVertexProcess = computeShader.FindKernel("VertexProcess");
-            kernelQuadProcess = computeShader.FindKernel("QuadProcess");
+            kernelVertexProcess = computeShader.FindKernel("VertexProcess"); //0 
+            kernelQuadProcess = computeShader.FindKernel("QuadProcess"); //1
         }
 
         public RenderTexture Refresh(Mesh mesh_, Transform transform_, Camera camera_)

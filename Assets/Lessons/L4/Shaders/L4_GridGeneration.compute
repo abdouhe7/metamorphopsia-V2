@@ -1,0 +1,127 @@
+// ============================================================
+// Lesson 4A — GPU Grid Generation
+//
+// COMPUTE SHADER version — does exactly the same work as the
+// CPU version (L3_GenerateGrid.cs), just in parallel on the GPU.
+//
+// All buffer names, parameter names, and math are identical
+// between the two so you can compare them line by line.
+// ============================================================
+
+#pragma kernel VertexKernel // 0
+#pragma kernel TriangleKernel // 1 
+#pragma kernel Amal // 2 
+
+// --- OUTPUT BUFFERS (names match L3 CPU arrays) ---
+
+RWStructuredBuffer<float3> vertices;   // same as Vector3[] vertices in CPU
+RWStructuredBuffer<float2> uvs;        // same as Vector2[] uvs      in CPU
+RWStructuredBuffer<uint>   triangles;  // same as int[] triangles    in CPU
+
+// --- PARAMETERS (names match L3 CPU inspector fields) ---
+
+uint columns;            // number of vertex columns
+uint rows;               // number of vertex rows
+float meshWidth;         // world-space width  of the grid
+float meshHeight;        // world-space height of the grid
+uint iterationsPerVertex; // heavy computation per vertex
+
+// ============================================================
+// VertexKernel — one thread per vertex
+//
+// Math is IDENTICAL to L3_GenerateGrid.cs's double loop:
+//
+//   index = x + y * columns
+//   u     = x / (columns - 1)
+//   v     = y / (rows - 1)
+//   height = Σ sin(i*2π*u) * cos(i*2π*v) / i   × 0.05
+//   pos    = ((u-0.5)*meshWidth, (v-0.5)*meshHeight, height)
+// ============================================================
+[numthreads(64, 1, 1)]
+void VertexKernel(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    if (index >= columns * rows) return;
+
+    uint x = index % columns;
+    uint y = index / columns;
+
+    float u = (float)x / (float)(columns - 1);
+    float v = (float)y / (float)(rows - 1);
+
+    // Heavy per-vertex computation — identical to CPU
+    float height = 0.0f;
+    for (uint i = 1; i <= iterationsPerVertex; i++)
+    {
+        float fi = (float)i;
+        height += sin(fi * 6.2831853f * u) * cos(fi * 6.2831853f * v) / fi;
+    }
+    height *= 0.05f;
+
+    // Write position and UV — same layout as CPU
+    vertices[index] = float3(
+        (u - 0.5f) * meshWidth,
+        (v - 0.5f) * meshHeight,
+        height
+    );
+    uvs[index] = float2(u, v);
+}
+
+// ============================================================
+// TriangleKernel — one thread per quad
+//
+// Same winding as CPU:  (bl,tl,tr) then (bl,tr,br)
+// ============================================================
+[numthreads(64, 1, 1)]
+void TriangleKernel(uint3 id : SV_DispatchThreadID)
+{
+    uint quadIndex = id.x;
+    uint quadsX = columns - 1;
+    uint quadsY = rows - 1;
+    uint totalQuads = quadsX * quadsY;
+
+    if (quadIndex >= totalQuads) return;
+
+    uint x = quadIndex % quadsX;
+    uint y = quadIndex / quadsX;
+
+    uint bl = x + y * columns;
+    uint br = (x + 1) + y * columns;
+    uint tl = x + (y + 1) * columns;
+    uint tr = (x + 1) + (y + 1) * columns;
+
+    uint t = quadIndex * 6;
+    triangles[t + 0] = bl;
+    triangles[t + 1] = tl;
+    triangles[t + 2] = tr;
+    triangles[t + 3] = bl;
+    triangles[t + 4] = tr;
+    triangles[t + 5] = br;
+}
+
+[numthreads(64, 1, 1)]
+void Amal(uint3 id : SV_DispatchThreadID)
+{
+    uint quadIndex = id.x;
+    uint quadsX = columns - 1;
+    uint quadsY = rows - 1;
+    uint totalQuads = quadsX * quadsY;
+
+    if (quadIndex >= totalQuads) return;
+
+    uint x = quadIndex % quadsX;
+    uint y = quadIndex / quadsX;
+
+    uint bl = x + y * columns;
+    uint br = (x + 1) + y * columns;
+    uint tl = x + (y + 1) * columns;
+    uint tr = (x + 1) + (y + 1) * columns;
+
+    uint t = quadIndex * 6;
+    triangles[t + 0] = bl;
+    triangles[t + 1] = tl;
+    triangles[t + 2] = tr;
+    triangles[t + 3] = bl;
+    triangles[t + 4] = tr;
+    triangles[t + 5] = br;
+}
